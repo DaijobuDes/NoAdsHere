@@ -1,8 +1,8 @@
 ﻿using System.IO;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using NoAdsHere.Configuration.Entities;
 
-namespace NoAdsHere.Bot.Config
+namespace NoAdsHere.Configuration
 {
     public class ConfigManager
     {

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Dynamic;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Addons.MicrosoftLogging;
@@ -6,7 +7,8 @@ using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using NoAdsHere.Bot.Config;
+using NoAdsHere.Configuration;
+using NoAdsHere.Database;
 
 namespace NoAdsHere.Bot
 {
@@ -28,13 +30,19 @@ namespace NoAdsHere.Bot
             _logger = _provider.GetRequiredService<ILogger<Program>>();
             _logger.LogInformation("Hello World!");
 
-            var cm = _provider.GetRequiredService<ConfigManager>();
-            cm.Load();
+            // Force load the config to crete it if its not existing
+            var cm = _provider.GetRequiredService<ConfigManager>().Load();
 
             _client = _provider.GetRequiredService<DiscordShardedClient>();
             _client.UseMicrosoftLogging(_provider.GetRequiredService<ILogger<DiscordShardedClient>>());
 
-            await _client.LoginAsync(TokenType.Bot, cm.GlobalConfig.Token);
+            // Test inset
+            var unit = _provider.GetService<DatabaseUnit>();
+            
+            // Ensure that the Database is always up-todate
+            await unit.MigrateAsync();
+
+            await _client.LoginAsync(TokenType.Bot, cm.GlobalConfig.Bot.Token);
             await _client.StartAsync();
 
             await Task.Delay(-1);
@@ -49,6 +57,8 @@ namespace NoAdsHere.Bot
             var services = new ServiceCollection();
 
             services.AddLogging(builder => builder.SetMinimumLevel(LogLevel.Trace));
+            services.AddDbContext<DatabaseContext>();
+            services.AddSingleton<DatabaseUnit>();
             services.AddSingleton<ConfigManager>();
             services.AddSingleton(new DiscordShardedClient(
                 new DiscordSocketConfig
@@ -79,7 +89,7 @@ namespace NoAdsHere.Bot
             var client = new DiscordSocketClient();
             var cm = new ConfigManager().Load();
 
-            client.LoginAsync(TokenType.Bot, cm.GlobalConfig.Token).GetAwaiter().GetResult();
+            client.LoginAsync(TokenType.Bot, cm.GlobalConfig.Bot.Token).GetAwaiter().GetResult();
             
             return client.GetRecommendedShardCountAsync().GetAwaiter().GetResult();
         }
